@@ -13,7 +13,11 @@ app/build/
 # IDE
 .idea/
 *.iml
+.kotlin/
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Local test artifacts
+artifacts/

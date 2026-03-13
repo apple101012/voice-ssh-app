@@ -4,8 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 
@@ -14,7 +13,7 @@ class VoiceSshScreenTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun promptTabDisablesSendUntilConnected() {
+    fun promptSectionDisablesSendUntilConnected() {
         composeRule.setContent {
             VoiceSshTheme {
                 VoiceSshScreen(
@@ -34,6 +33,7 @@ class VoiceSshScreenTest {
                     onAuthModeChange = {},
                     onPasswordChange = {},
                     onPrivateKeyChange = {},
+                    onPickPrivateKeyFile = {},
                     onUseEmulatorHost = {},
                     onConnect = {},
                     onDisconnect = {},
@@ -48,7 +48,7 @@ class VoiceSshScreenTest {
     }
 
     @Test
-    fun terminalTabShowsConnectionFields() {
+    fun testingLayoutShowsConnectionAndTerminalFields() {
         composeRule.setContent {
             VoiceSshTheme {
                 VoiceSshScreen(
@@ -63,6 +63,7 @@ class VoiceSshScreenTest {
                     onAuthModeChange = {},
                     onPasswordChange = {},
                     onPrivateKeyChange = {},
+                    onPickPrivateKeyFile = {},
                     onUseEmulatorHost = {},
                     onConnect = {},
                     onDisconnect = {},
@@ -73,15 +74,15 @@ class VoiceSshScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Terminal").performClick()
         composeRule.onNodeWithTag("hostField").assertIsDisplayed()
         composeRule.onNodeWithTag("usernameField").assertIsDisplayed()
         composeRule.onNodeWithTag("passwordField").assertIsDisplayed()
         composeRule.onNodeWithTag("terminalOutput").assertIsDisplayed()
+        composeRule.onNodeWithTag("draftField").performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun terminalTabShowsPrivateKeyFieldInSshKeyMode() {
+    fun sshKeyModeShowsPrivateKeyField() {
         composeRule.setContent {
             VoiceSshTheme {
                 VoiceSshScreen(
@@ -98,6 +99,7 @@ class VoiceSshScreenTest {
                     onAuthModeChange = {},
                     onPasswordChange = {},
                     onPrivateKeyChange = {},
+                    onPickPrivateKeyFile = {},
                     onUseEmulatorHost = {},
                     onConnect = {},
                     onDisconnect = {},
@@ -108,7 +110,6 @@ class VoiceSshScreenTest {
             }
         }
 
-        composeRule.onNodeWithText("Terminal").performClick()
         composeRule.onNodeWithTag("privateKeyField").assertIsDisplayed()
     }
 }

@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import androidx.activity.ComponentActivity
@@ -23,7 +24,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val isDebuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
         enableEdgeToEdge()
+        if (isDebuggable) {
+            applyDebugPrefill(intent)
+        }
 
         setContent {
             VoiceSshTheme {
@@ -53,6 +59,26 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
                             latestViewModel.onSpeechError("Microphone permission is required for speech input.")
+                    }
+                }
+
+                val privateKeyPicker =
+                    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                        if (uri == null) {
+                            latestViewModel.onSpeechError("No key file was selected.")
+                            return@rememberLauncherForActivityResult
+                        }
+
+                        runCatching {
+                            context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                        }.onSuccess { contents ->
+                            if (contents.isNullOrBlank()) {
+                                latestViewModel.onSpeechError("The selected key file was empty.")
+                            } else {
+                                latestViewModel.onPrivateKeyImported(contents)
+                            }
+                        }.onFailure {
+                            latestViewModel.onSpeechError("Unable to read the selected key file.")
                         }
                     }
 
@@ -86,6 +112,7 @@ class MainActivity : ComponentActivity() {
                     onAuthModeChange = viewModel::onAuthModeChange,
                     onPasswordChange = viewModel::onPasswordChange,
                     onPrivateKeyChange = viewModel::onPrivateKeyChange,
+                    onPickPrivateKeyFile = { privateKeyPicker.launch("*/*") },
                     onUseEmulatorHost = viewModel::useEmulatorHost,
                     onConnect = viewModel::connect,
                     onDisconnect = viewModel::disconnect,
@@ -95,6 +122,33 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    internal fun populatePrivateKeyForTesting(privateKey: String) {
+        viewModel.onPrivateKeyChange(privateKey)
+    }
+
+    internal fun connectForTesting() {
+        viewModel.connect()
+    }
+
+    internal fun sendTerminalInputForTesting(input: String) {
+        viewModel.onTerminalInputChange(input)
+        viewModel.sendTerminalInput()
+    }
+
+    internal fun currentUiStateForTesting(): VoiceSshUiState {
+        return viewModel.uiState.value
+    }
+
+    private fun applyDebugPrefill(intent: Intent) {
+        intent.getStringExtra(EXTRA_DEBUG_HOST)?.let(viewModel::onHostChange)
+        intent.getStringExtra(EXTRA_DEBUG_PORT)?.let(viewModel::onPortChange)
+        intent.getStringExtra(EXTRA_DEBUG_USERNAME)?.let(viewModel::onUsernameChange)
+        intent.getStringExtra(EXTRA_DEBUG_AUTH_MODE)
+            ?.let { value -> AuthMode.entries.firstOrNull { it.name == value } }
+            ?.let(viewModel::onAuthModeChange)
+        intent.getStringExtra(EXTRA_DEBUG_PRIVATE_KEY)?.let(viewModel::onPrivateKeyChange)
     }
 
     private fun launchSpeechRecognizer(
@@ -111,5 +165,13 @@ class MainActivity : ComponentActivity() {
         } catch (_: ActivityNotFoundException) {
             onUnavailable("No speech recognition service is available on this device.")
         }
+    }
+
+    companion object {
+        const val EXTRA_DEBUG_AUTH_MODE = "com.apple101012.voicessh.extra.DEBUG_AUTH_MODE"
+        const val EXTRA_DEBUG_HOST = "com.apple101012.voicessh.extra.DEBUG_HOST"
+        const val EXTRA_DEBUG_PORT = "com.apple101012.voicessh.extra.DEBUG_PORT"
+        const val EXTRA_DEBUG_PRIVATE_KEY = "com.apple101012.voicessh.extra.DEBUG_PRIVATE_KEY"
+        const val EXTRA_DEBUG_USERNAME = "com.apple101012.voicessh.extra.DEBUG_USERNAME"
     }
 }

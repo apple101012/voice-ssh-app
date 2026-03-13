@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $baseDir = Join-Path $env:LOCALAPPDATA "VoiceSshApp\local-sshd"
-$hostKeyPath = Join-Path $baseDir "host_ed25519"
+$hostKeyPath = Join-Path $baseDir "host_rsa"
 $clientKeyPath = Join-Path $baseDir "client_rsa"
 $authorizedKeysPath = Join-Path $baseDir "authorized_keys"
 $configPath = Join-Path $baseDir "sshd_config"
@@ -23,7 +23,7 @@ if ($ForceRegenerate) {
 }
 
 if (-not (Test-Path $hostKeyPath)) {
-    & $sshKeygen -q -t ed25519 -N "" -f $hostKeyPath | Out-Null
+    & $sshKeygen -q -t rsa -b 3072 -N "" -f $hostKeyPath | Out-Null
 }
 
 if (-not (Test-Path $clientKeyPath)) {
@@ -41,6 +41,7 @@ PidFile $($pidPath -replace "\\", "/")
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PubkeyAuthentication yes
+HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256,ssh-rsa
 ChallengeResponseAuthentication no
 PermitEmptyPasswords no
 StrictModes no

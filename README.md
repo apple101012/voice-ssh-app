@@ -18,7 +18,7 @@ First working milestone is implemented.
 
 ## Current Milestone
 
-- Jetpack Compose app with `Voice Prompt` and `Terminal` tabs
+- Jetpack Compose app with a simplified single-screen testing layout
 - Speech-to-text via Android `RecognizerIntent`
 - Manual prompt editing and `Send to Terminal`
 - SSH shell connection over password auth or pasted private-key auth using JSch
@@ -32,6 +32,7 @@ First working milestone is implemented.
 - `./gradlew.bat assembleDebug`
 - `./gradlew.bat connectedDebugAndroidTest`
 - `./gradlew.bat installDebug`
+- `./scripts/run-local-smoke-test.ps1`
 
 The JVM test suite includes real SSH integration tests for both password auth and SSH key auth using an embedded SSH server. The Android instrumentation suite covers the Compose tab flow, password mode, and SSH-key mode rendering.
 
@@ -43,9 +44,12 @@ The JVM test suite includes real SSH integration tests for both password auth an
 
 - Start a loopback-only Windows SSH test server with `./scripts/start-local-test-sshd.ps1`
 - Stop it with `./scripts/stop-local-test-sshd.ps1`
+- Run the end-to-end emulator smoke test with `./scripts/run-local-smoke-test.ps1`
 - The script generates host/client test keys under `%LOCALAPPDATA%\VoiceSshApp\local-sshd`
 - Nothing in that directory is committed to the repo
 - When testing from the Android emulator on the same Windows machine, use host `10.0.2.2`
+- Smoke-test screenshots are pulled into `artifacts/local-smoke/local-ssh-smoke`
+- The current testing UI keeps connection controls, terminal output, and prompt input on one screen
 
 ## Known Limits In This Milestone
 
@@ -58,3 +62,4 @@ The JVM test suite includes real SSH integration tests for both password auth an
 - [Requirements](docs/requirements.md)
 - [Implementation Plan](docs/implementation-plan.md)
 - [Self-Review](docs/self-review.md)
+- [Local Smoke Test](docs/local-smoke-test.md)

@@ -60,6 +60,13 @@ class VoiceSshViewModel(
 
     fun onPrivateKeyChange(privateKey: String) = updateProfile { copy(privateKey = privateKey) }
 
+    fun onPrivateKeyImported(privateKey: String) {
+        mutableUiState.value = mutableUiState.value.copy(
+            profile = mutableUiState.value.profile.copy(privateKey = privateKey),
+            message = "Private key loaded.",
+        )
+    }
+
     fun useEmulatorHost() = updateProfile { copy(host = EMULATOR_HOST) }
 
     fun onTerminalInputChange(input: String) {

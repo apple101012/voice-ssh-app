@@ -62,6 +62,20 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
                     Properties().apply {
                         put("StrictHostKeyChecking", "no")
                         put(
+                            "server_host_key",
+                            appendAlgorithms(
+                                JSch.getConfig("server_host_key"),
+                                listOf("ssh-ed25519", "rsa-sha2-512", "rsa-sha2-256", "ssh-rsa"),
+                            ),
+                        )
+                        put(
+                            "PubkeyAcceptedAlgorithms",
+                            appendAlgorithms(
+                                JSch.getConfig("PubkeyAcceptedAlgorithms"),
+                                listOf("rsa-sha2-512", "rsa-sha2-256", "ssh-rsa"),
+                            ),
+                        )
+                        put(
                             "PreferredAuthentications",
                             if (profile.authMode == AuthMode.SshKey) {
                                 "publickey"
@@ -191,6 +205,21 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
 
     private fun OutputStream.closeQuietly() {
         runCatching { close() }
+    }
+
+    private fun appendAlgorithms(existing: String?, algorithms: List<String>): String {
+        val values = existing
+            .orEmpty()
+            .split(',')
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .toMutableList()
+        algorithms.forEach { algorithm ->
+            if (algorithm !in values) {
+                values += algorithm
+            }
+        }
+        return values.joinToString(",")
     }
 
     private companion object {
