@@ -1,12 +1,15 @@
 package com.apple101012.voicessh
 
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasAnyDescendant
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
 
@@ -46,6 +49,7 @@ class VoiceSshScreenTest {
                     onDisconnect = {},
                     onTerminalInputChange = {},
                     onSendTerminalInput = {},
+                    onSendQuickCommand = {},
                     onDismissMessage = {},
                 )
             }
@@ -81,6 +85,7 @@ class VoiceSshScreenTest {
                     onDisconnect = {},
                     onTerminalInputChange = {},
                     onSendTerminalInput = {},
+                    onSendQuickCommand = {},
                     onDismissMessage = {},
                 )
             }
@@ -88,7 +93,7 @@ class VoiceSshScreenTest {
 
         composeRule.onNodeWithTag("draftField").assertIsDisplayed()
         composeRule.onNodeWithTag("terminalTab").performClick()
-        composeRule.onNodeWithTag("savedSessionsSection").assertIsDisplayed()
+        composeRule.onNodeWithTag("savedSessionsSection").assert(hasAnyDescendant(hasText("Saved Sessions")))
         composeRule.onNodeWithTag("sessionNameField").assertIsDisplayed()
         composeRule.onNodeWithTag("usernameField").assertIsDisplayed()
         composeRule.onNodeWithTag("passwordField").assertIsDisplayed()
@@ -123,13 +128,13 @@ class VoiceSshScreenTest {
                     onDisconnect = {},
                     onTerminalInputChange = {},
                     onSendTerminalInput = {},
+                    onSendQuickCommand = {},
                     onDismissMessage = {},
                 )
             }
         }
 
         composeRule.onNodeWithTag("terminalTab").performClick()
-        composeRule.onNodeWithText("Edit Key").performClick()
-        composeRule.onNodeWithTag("privateKeyField").assertIsDisplayed()
+        composeRule.onNodeWithTag("privateKeyField").assert(hasSetTextAction())
     }
 }

@@ -129,6 +129,7 @@ class MainActivity : ComponentActivity() {
                     onDisconnect = viewModel::disconnect,
                     onTerminalInputChange = viewModel::onTerminalInputChange,
                     onSendTerminalInput = viewModel::sendTerminalInput,
+                    onSendQuickCommand = viewModel::sendQuickCommand,
                     onDismissMessage = viewModel::dismissMessage,
                 )
             }

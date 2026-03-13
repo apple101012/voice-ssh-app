@@ -104,6 +104,21 @@ class VoiceSshViewModelTest {
         assertThat(viewModel.uiState.value.terminalSnapshot.status).isEqualTo(ConnectionStatus.Connected)
         assertThat(viewModel.uiState.value.terminalSnapshot.targetSummary).isEqualTo(savedSession.profile.summary)
     }
+
+    @Test
+    fun quickCommandSendsToRepositoryWhenConnected() = runTest {
+        val repository = FakeTerminalSessionRepository(
+            initialSnapshot = TerminalSessionSnapshot(status = ConnectionStatus.Connected),
+        )
+        val viewModel = VoiceSshViewModel(repository, FakeSavedSessionRepository())
+
+        viewModel.sendQuickCommand("codex")
+        advanceUntilIdle()
+
+        assertThat(repository.sentInputs).containsExactly("codex\n")
+        assertThat(viewModel.uiState.value.terminalInput).isEmpty()
+        assertThat(viewModel.uiState.value.message).isEqualTo("Command sent.")
+    }
 }
 
 private class FakeTerminalSessionRepository(

@@ -225,6 +225,11 @@ class VoiceSshViewModel(
         }
     }
 
+    fun sendQuickCommand(command: String) {
+        mutableUiState.value = mutableUiState.value.copy(terminalInput = command, message = null)
+        sendTerminalInput()
+    }
+
     override fun onCleared() {
         terminalRepository.close()
         super.onCleared()

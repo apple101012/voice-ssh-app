@@ -53,8 +53,11 @@ if (-not $connectedDevices) {
 }
 
 & $AdbPath wait-for-device | Out-Null
-& $gradleWrapper installDebug installDebugAndroidTest
-Assert-LastExitCode "Gradle installDebug installDebugAndroidTest"
+& $gradleWrapper installDebug
+Assert-LastExitCode "Gradle installDebug"
+
+& $gradleWrapper installDebugAndroidTest
+Assert-LastExitCode "Gradle installDebugAndroidTest"
 
 & $AdbPath shell rm -rf $remoteScreenshotDir | Out-Null
 
