@@ -37,7 +37,19 @@ class VoiceSshViewModelTest {
         viewModel.onUsernameChange("tester")
         viewModel.connect()
 
-        assertThat(viewModel.uiState.value.message).isEqualTo("Password is required for the first milestone.")
+        assertThat(viewModel.uiState.value.message).isEqualTo("Password is required for password auth.")
+    }
+
+    @Test
+    fun connectRequiresPrivateKeyForKeyAuth() {
+        val viewModel = VoiceSshViewModel(FakeTerminalSessionRepository())
+
+        viewModel.onHostChange("10.0.2.2")
+        viewModel.onUsernameChange("tester")
+        viewModel.onAuthModeChange(AuthMode.SshKey)
+        viewModel.connect()
+
+        assertThat(viewModel.uiState.value.message).isEqualTo("Private key is required for SSH key auth.")
     }
 
     @Test
@@ -58,7 +70,7 @@ private class FakeTerminalSessionRepository(
     override val sessionState: StateFlow<TerminalSessionSnapshot> = mutableState
     val sentInputs = mutableListOf<String>()
 
-    override suspend fun connect(profile: ConnectionProfile, password: String) {
+    override suspend fun connect(profile: ConnectionProfile) {
         mutableState.value = TerminalSessionSnapshot(
             status = ConnectionStatus.Connected,
             targetSummary = profile.summary,

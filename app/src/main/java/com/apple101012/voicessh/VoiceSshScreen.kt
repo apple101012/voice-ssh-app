@@ -71,7 +71,10 @@ fun VoiceSshScreen(
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
     onUsernameChange: (String) -> Unit,
+    onAuthModeChange: (AuthMode) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onPrivateKeyChange: (String) -> Unit,
+    onUseEmulatorHost: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onTerminalInputChange: (String) -> Unit,
@@ -157,7 +160,10 @@ fun VoiceSshScreen(
                     onHostChange = onHostChange,
                     onPortChange = onPortChange,
                     onUsernameChange = onUsernameChange,
+                    onAuthModeChange = onAuthModeChange,
                     onPasswordChange = onPasswordChange,
+                    onPrivateKeyChange = onPrivateKeyChange,
+                    onUseEmulatorHost = onUseEmulatorHost,
                     onConnect = onConnect,
                     onDisconnect = onDisconnect,
                     onTerminalInputChange = onTerminalInputChange,
@@ -269,13 +275,17 @@ private fun VoicePromptTab(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TerminalTab(
     uiState: VoiceSshUiState,
     onHostChange: (String) -> Unit,
     onPortChange: (String) -> Unit,
     onUsernameChange: (String) -> Unit,
+    onAuthModeChange: (AuthMode) -> Unit,
     onPasswordChange: (String) -> Unit,
+    onPrivateKeyChange: (String) -> Unit,
+    onUseEmulatorHost: () -> Unit,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onTerminalInputChange: (String) -> Unit,
@@ -298,6 +308,49 @@ private fun TerminalTab(
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    if (uiState.profile.authMode == AuthMode.Password) {
+                        Button(
+                            onClick = { onAuthModeChange(AuthMode.Password) },
+                            modifier = Modifier.testTag("passwordAuthButton"),
+                        ) {
+                            Text("Password")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onAuthModeChange(AuthMode.Password) },
+                            modifier = Modifier.testTag("passwordAuthButton"),
+                        ) {
+                            Text("Password")
+                        }
+                    }
+
+                    if (uiState.profile.authMode == AuthMode.SshKey) {
+                        Button(
+                            onClick = { onAuthModeChange(AuthMode.SshKey) },
+                            modifier = Modifier.testTag("keyAuthButton"),
+                        ) {
+                            Text("SSH Key")
+                        }
+                    } else {
+                        OutlinedButton(
+                            onClick = { onAuthModeChange(AuthMode.SshKey) },
+                            modifier = Modifier.testTag("keyAuthButton"),
+                        ) {
+                            Text("SSH Key")
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onUseEmulatorHost,
+                        modifier = Modifier.testTag("emulatorHostButton"),
+                    ) {
+                        Text("Use Emulator Host")
+                    }
+                }
                 OutlinedTextField(
                     value = uiState.profile.host,
                     onValueChange = onHostChange,
@@ -319,13 +372,28 @@ private fun TerminalTab(
                         modifier = Modifier.weight(2f).testTag("usernameField"),
                     )
                 }
-                OutlinedTextField(
-                    value = uiState.profile.password,
-                    onValueChange = onPasswordChange,
-                    label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth().testTag("passwordField"),
-                )
+                if (uiState.profile.authMode == AuthMode.Password) {
+                    OutlinedTextField(
+                        value = uiState.profile.password,
+                        onValueChange = onPasswordChange,
+                        label = { Text("Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth().testTag("passwordField"),
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = uiState.profile.privateKey,
+                        onValueChange = onPrivateKeyChange,
+                        label = { Text("Private key") },
+                        supportingText = {
+                            Text("Paste an OpenSSH or PEM private key. On the Android emulator, your Windows host is usually 10.0.2.2.")
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 220.dp)
+                            .testTag("privateKeyField"),
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Button(
                         onClick = onConnect,

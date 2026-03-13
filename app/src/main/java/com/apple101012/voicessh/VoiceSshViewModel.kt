@@ -54,7 +54,13 @@ class VoiceSshViewModel(
 
     fun onUsernameChange(username: String) = updateProfile { copy(username = username) }
 
+    fun onAuthModeChange(authMode: AuthMode) = updateProfile { copy(authMode = authMode) }
+
     fun onPasswordChange(password: String) = updateProfile { copy(password = password) }
+
+    fun onPrivateKeyChange(privateKey: String) = updateProfile { copy(privateKey = privateKey) }
+
+    fun useEmulatorHost() = updateProfile { copy(host = EMULATOR_HOST) }
 
     fun onTerminalInputChange(input: String) {
         mutableUiState.value = mutableUiState.value.copy(terminalInput = input, message = null)
@@ -98,7 +104,6 @@ class VoiceSshViewModel(
                     host = profile.host.trim(),
                     username = profile.username.trim(),
                 ),
-                password = profile.password,
             )
         }
     }
@@ -161,13 +166,20 @@ class VoiceSshViewModel(
     private fun validateProfile(profile: ConnectionProfile): String? {
         if (profile.host.isBlank()) return "Host is required."
         if (profile.username.isBlank()) return "Username is required."
-        if (profile.password.isBlank()) return "Password is required for the first milestone."
         val port = profile.port.ifBlank { "22" }.toIntOrNull()
         if (port == null || port !in 1..65535) return "Port must be between 1 and 65535."
+        if (profile.authMode == AuthMode.Password && profile.password.isBlank()) {
+            return "Password is required for password auth."
+        }
+        if (profile.authMode == AuthMode.SshKey && profile.privateKey.isBlank()) {
+            return "Private key is required for SSH key auth."
+        }
         return null
     }
 
     companion object {
+        const val EMULATOR_HOST = "10.0.2.2"
+
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer { VoiceSshViewModel(JschTerminalSessionRepository()) }
         }

@@ -6,10 +6,17 @@ data class ConnectionProfile(
     val host: String = "",
     val port: String = "22",
     val username: String = "",
+    val authMode: AuthMode = AuthMode.Password,
     val password: String = "",
+    val privateKey: String = "",
 ) {
     val summary: String
         get() = "${username.ifBlank { "user" }}@${host.ifBlank { "host" }}:${port.ifBlank { "22" }}"
+}
+
+enum class AuthMode(val label: String) {
+    Password("Password"),
+    SshKey("SSH Key"),
 }
 
 enum class ConnectionStatus {
@@ -28,7 +35,7 @@ data class TerminalSessionSnapshot(
 interface TerminalSessionRepository {
     val sessionState: StateFlow<TerminalSessionSnapshot>
 
-    suspend fun connect(profile: ConnectionProfile, password: String)
+    suspend fun connect(profile: ConnectionProfile)
 
     suspend fun disconnect()
 

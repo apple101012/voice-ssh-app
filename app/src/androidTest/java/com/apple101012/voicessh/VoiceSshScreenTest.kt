@@ -31,7 +31,10 @@ class VoiceSshScreenTest {
                     onHostChange = {},
                     onPortChange = {},
                     onUsernameChange = {},
+                    onAuthModeChange = {},
                     onPasswordChange = {},
+                    onPrivateKeyChange = {},
+                    onUseEmulatorHost = {},
                     onConnect = {},
                     onDisconnect = {},
                     onTerminalInputChange = {},
@@ -57,7 +60,10 @@ class VoiceSshScreenTest {
                     onHostChange = {},
                     onPortChange = {},
                     onUsernameChange = {},
+                    onAuthModeChange = {},
                     onPasswordChange = {},
+                    onPrivateKeyChange = {},
+                    onUseEmulatorHost = {},
                     onConnect = {},
                     onDisconnect = {},
                     onTerminalInputChange = {},
@@ -72,5 +78,37 @@ class VoiceSshScreenTest {
         composeRule.onNodeWithTag("usernameField").assertIsDisplayed()
         composeRule.onNodeWithTag("passwordField").assertIsDisplayed()
         composeRule.onNodeWithTag("terminalOutput").assertIsDisplayed()
+    }
+
+    @Test
+    fun terminalTabShowsPrivateKeyFieldInSshKeyMode() {
+        composeRule.setContent {
+            VoiceSshTheme {
+                VoiceSshScreen(
+                    uiState = VoiceSshUiState(
+                        profile = ConnectionProfile(authMode = AuthMode.SshKey),
+                    ),
+                    onDraftChange = {},
+                    onClearDraft = {},
+                    onSendDraft = {},
+                    onLaunchSpeech = {},
+                    onHostChange = {},
+                    onPortChange = {},
+                    onUsernameChange = {},
+                    onAuthModeChange = {},
+                    onPasswordChange = {},
+                    onPrivateKeyChange = {},
+                    onUseEmulatorHost = {},
+                    onConnect = {},
+                    onDisconnect = {},
+                    onTerminalInputChange = {},
+                    onSendTerminalInput = {},
+                    onDismissMessage = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Terminal").performClick()
+        composeRule.onNodeWithTag("privateKeyField").assertIsDisplayed()
     }
 }

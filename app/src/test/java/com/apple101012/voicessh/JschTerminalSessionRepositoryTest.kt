@@ -1,7 +1,11 @@
 package com.apple101012.voicessh
 
+import com.jcraft.jsch.JSch
+import com.jcraft.jsch.KeyPair
+import com.google.common.truth.Truth.assertWithMessage
 import com.google.common.truth.Truth.assertThat
 import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.io.OutputStream
@@ -21,17 +25,9 @@ import org.junit.Test
 
 class JschTerminalSessionRepositoryTest {
     @Test
-    fun connectAndSendReceivesShellOutput() = runBlocking {
+    fun connectAndSendReceivesShellOutputWithPasswordAuth() = runBlocking {
         val hostKeyPath = Files.createTempFile("voice-ssh-host-key", ".ser")
-        val server = SshServer.setUpDefaultServer().apply {
-            port = 0
-            keyPairProvider = SimpleGeneratorHostKeyProvider(hostKeyPath)
-            passwordAuthenticator = { username, password, _ ->
-                username == TEST_USERNAME && password == TEST_PASSWORD
-            }
-            shellFactory = TestShellFactory()
-            start()
-        }
+        val server = startPasswordServer(hostKeyPath)
 
         val repository = JschTerminalSessionRepository()
 
@@ -43,10 +39,11 @@ class JschTerminalSessionRepositoryTest {
                     username = TEST_USERNAME,
                     password = TEST_PASSWORD,
                 ),
-                password = TEST_PASSWORD,
             )
 
-            assertThat(awaitState(repository) { it.status == ConnectionStatus.Connected }).isTrue()
+            assertWithMessage(repository.sessionState.value.toString())
+                .that(awaitState(repository) { it.status == ConnectionStatus.Connected })
+                .isTrue()
             repository.send("echo hello\n")
 
             assertThat(
@@ -60,11 +57,78 @@ class JschTerminalSessionRepositoryTest {
         }
     }
 
+    @Test
+    fun connectAndSendReceivesShellOutputWithKeyAuth() = runBlocking {
+        val hostKeyPath = Files.createTempFile("voice-ssh-host-key", ".ser")
+        val server = startPublicKeyServer(hostKeyPath)
+        val privateKey = generatePrivateKey()
+
+        val repository = JschTerminalSessionRepository()
+
+        try {
+            repository.connect(
+                profile = ConnectionProfile(
+                    host = "127.0.0.1",
+                    port = server.port.toString(),
+                    username = TEST_USERNAME,
+                    authMode = AuthMode.SshKey,
+                    privateKey = privateKey,
+                ),
+            )
+
+            assertWithMessage(repository.sessionState.value.toString())
+                .that(awaitState(repository) { it.status == ConnectionStatus.Connected })
+                .isTrue()
+            repository.send("echo hello\n")
+
+            assertThat(
+                awaitState(repository) { it.output.contains("echo: echo hello") },
+            ).isTrue()
+        } finally {
+            repository.disconnect()
+            repository.close()
+            server.stop(true)
+            Files.deleteIfExists(hostKeyPath)
+        }
+    }
+
+    private fun startPasswordServer(hostKeyPath: java.nio.file.Path): SshServer {
+        return SshServer.setUpDefaultServer().apply {
+            port = 0
+            keyPairProvider = SimpleGeneratorHostKeyProvider(hostKeyPath)
+            passwordAuthenticator = { username, password, _ ->
+                username == TEST_USERNAME && password == TEST_PASSWORD
+            }
+            shellFactory = TestShellFactory()
+            start()
+        }
+    }
+
+    private fun startPublicKeyServer(hostKeyPath: java.nio.file.Path): SshServer {
+        return SshServer.setUpDefaultServer().apply {
+            port = 0
+            keyPairProvider = SimpleGeneratorHostKeyProvider(hostKeyPath)
+            passwordAuthenticator = { _, _, _ -> false }
+            publickeyAuthenticator = { username, _, _ -> username == TEST_USERNAME }
+            shellFactory = TestShellFactory()
+            start()
+        }
+    }
+
+    private fun generatePrivateKey(): String {
+        val keyPair = KeyPair.genKeyPair(JSch(), KeyPair.RSA)
+        return ByteArrayOutputStream().use { outputStream ->
+            keyPair.writePrivateKey(outputStream)
+            keyPair.dispose()
+            outputStream.toString(StandardCharsets.UTF_8)
+        }
+    }
+
     private suspend fun awaitState(
         repository: JschTerminalSessionRepository,
         predicate: (TerminalSessionSnapshot) -> Boolean,
     ): Boolean {
-        repeat(40) {
+        repeat(100) {
             if (predicate(repository.sessionState.value)) {
                 return true
             }

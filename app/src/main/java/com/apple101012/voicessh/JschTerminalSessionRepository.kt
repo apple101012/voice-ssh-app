@@ -15,6 +15,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,7 +30,7 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
     private var terminalInput: OutputStream? = null
     private var readJob: Job? = null
 
-    override suspend fun connect(profile: ConnectionProfile, password: String) {
+    override suspend fun connect(profile: ConnectionProfile) {
         disconnect()
         _sessionState.value = TerminalSessionSnapshot(
             status = ConnectionStatus.Connecting,
@@ -44,13 +45,30 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
             withContext(Dispatchers.IO) {
                 val port = profile.port.toInt()
                 val jsch = JSch()
+                if (profile.authMode == AuthMode.SshKey) {
+                    jsch.addIdentity(
+                        KEY_IDENTITY_NAME,
+                        profile.privateKey.trim().toByteArray(StandardCharsets.UTF_8),
+                        null,
+                        null,
+                    )
+                }
                 val nextSession = jsch.getSession(profile.username, profile.host, port)
-                nextSession.setPassword(password)
+                if (profile.authMode == AuthMode.Password) {
+                    nextSession.setPassword(profile.password)
+                }
                 nextSession.timeout = CONNECT_TIMEOUT_MS
                 nextSession.setConfig(
                     Properties().apply {
                         put("StrictHostKeyChecking", "no")
-                        put("PreferredAuthentications", "password,keyboard-interactive")
+                        put(
+                            "PreferredAuthentications",
+                            if (profile.authMode == AuthMode.SshKey) {
+                                "publickey"
+                            } else {
+                                "password,keyboard-interactive"
+                            },
+                        )
                     },
                 )
                 nextSession.connect(CONNECT_TIMEOUT_MS)
@@ -70,26 +88,30 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
                 }
             }
 
-            _sessionState.value = _sessionState.value.copy(
-                status = ConnectionStatus.Connected,
-                output = appendLine(
-                    _sessionState.value.output,
-                    "Connected to ${profile.summary}.",
-                ),
-                targetSummary = profile.summary,
-                lastError = null,
-            )
+            _sessionState.update { current ->
+                current.copy(
+                    status = ConnectionStatus.Connected,
+                    output = appendLine(
+                        current.output,
+                        "Connected to ${profile.summary}.",
+                    ),
+                    targetSummary = profile.summary,
+                    lastError = null,
+                )
+            }
         } catch (error: Exception) {
             disconnect()
-            _sessionState.value = _sessionState.value.copy(
-                status = ConnectionStatus.Disconnected,
-                output = appendLine(
-                    _sessionState.value.output,
-                    "Connection failed: ${error.message ?: "Unknown error"}",
-                ),
-                lastError = error.message ?: "Unknown error",
-                targetSummary = profile.summary,
-            )
+            _sessionState.update { current ->
+                current.copy(
+                    status = ConnectionStatus.Disconnected,
+                    output = appendLine(
+                        current.output,
+                        "Connection failed: ${error.message ?: "Unknown error"}",
+                    ),
+                    lastError = error.message ?: "Unknown error",
+                    targetSummary = profile.summary,
+                )
+            }
         }
     }
 
@@ -106,10 +128,12 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
         }
 
         if (_sessionState.value.status != ConnectionStatus.Disconnected) {
-            _sessionState.value = _sessionState.value.copy(
-                status = ConnectionStatus.Disconnected,
-                output = appendLine(_sessionState.value.output, "Disconnected."),
-            )
+            _sessionState.update { current ->
+                current.copy(
+                    status = ConnectionStatus.Disconnected,
+                    output = appendLine(current.output, "Disconnected."),
+                )
+            }
         }
     }
 
@@ -138,10 +162,12 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
                 continue
             }
 
-            _sessionState.value = _sessionState.value.copy(
-                output = trimOutput(_sessionState.value.output + chunk),
-                lastError = null,
-            )
+            _sessionState.update { current ->
+                current.copy(
+                    output = trimOutput(current.output + chunk),
+                    lastError = null,
+                )
+            }
         }
     }
 
@@ -170,6 +196,7 @@ class JschTerminalSessionRepository : TerminalSessionRepository {
     private companion object {
         private const val CONNECT_TIMEOUT_MS = 10_000
         private const val MAX_OUTPUT_CHARS = 16_000
+        private const val KEY_IDENTITY_NAME = "voice-ssh-inline-key"
         private val ANSI_ESCAPE_REGEX = Regex("\\u001B\\[[;?0-9]*[ -/]*[@-~]")
     }
 }
