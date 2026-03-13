@@ -4,6 +4,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import org.junit.Rule
 import org.junit.Test
@@ -23,6 +25,11 @@ class VoiceSshScreenTest {
                             status = ConnectionStatus.Disconnected,
                         ),
                     ),
+                    onSessionNameChange = {},
+                    onSaveSession = {},
+                    onLoadSession = {},
+                    onQuickConnectSession = {},
+                    onDeleteSession = {},
                     onDraftChange = {},
                     onClearDraft = {},
                     onSendDraft = {},
@@ -48,11 +55,16 @@ class VoiceSshScreenTest {
     }
 
     @Test
-    fun testingLayoutShowsConnectionAndTerminalFields() {
+    fun promptTabIsDefaultAndTerminalTabShowsConnectionFields() {
         composeRule.setContent {
             VoiceSshTheme {
                 VoiceSshScreen(
                     uiState = VoiceSshUiState(),
+                    onSessionNameChange = {},
+                    onSaveSession = {},
+                    onLoadSession = {},
+                    onQuickConnectSession = {},
+                    onDeleteSession = {},
                     onDraftChange = {},
                     onClearDraft = {},
                     onSendDraft = {},
@@ -74,21 +86,27 @@ class VoiceSshScreenTest {
             }
         }
 
-        composeRule.onNodeWithTag("hostField").assertIsDisplayed()
+        composeRule.onNodeWithTag("draftField").assertIsDisplayed()
+        composeRule.onNodeWithTag("terminalTab").performClick()
+        composeRule.onNodeWithTag("savedSessionsSection").assertIsDisplayed()
+        composeRule.onNodeWithTag("sessionNameField").assertIsDisplayed()
         composeRule.onNodeWithTag("usernameField").assertIsDisplayed()
         composeRule.onNodeWithTag("passwordField").assertIsDisplayed()
-        composeRule.onNodeWithTag("terminalOutput").assertIsDisplayed()
-        composeRule.onNodeWithTag("draftField").performScrollTo().assertIsDisplayed()
     }
 
     @Test
-    fun sshKeyModeShowsPrivateKeyField() {
+    fun sshKeyModeCanRevealPrivateKeyField() {
         composeRule.setContent {
             VoiceSshTheme {
                 VoiceSshScreen(
                     uiState = VoiceSshUiState(
                         profile = ConnectionProfile(authMode = AuthMode.SshKey),
                     ),
+                    onSessionNameChange = {},
+                    onSaveSession = {},
+                    onLoadSession = {},
+                    onQuickConnectSession = {},
+                    onDeleteSession = {},
                     onDraftChange = {},
                     onClearDraft = {},
                     onSendDraft = {},
@@ -110,6 +128,8 @@ class VoiceSshScreenTest {
             }
         }
 
+        composeRule.onNodeWithTag("terminalTab").performClick()
+        composeRule.onNodeWithText("Edit Key").performClick()
         composeRule.onNodeWithTag("privateKeyField").assertIsDisplayed()
     }
 }

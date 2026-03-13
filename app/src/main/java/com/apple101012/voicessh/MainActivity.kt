@@ -20,11 +20,16 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
-    private val viewModel by viewModels<VoiceSshViewModel> { VoiceSshViewModel.Factory }
+    private val viewModel by viewModels<VoiceSshViewModel> { VoiceSshViewModel.factory(applicationContext) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val isDebuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        val initialTabIndex = if (isDebuggable && intent.getBooleanExtra(EXTRA_DEBUG_START_ON_TERMINAL, false)) {
+            1
+        } else {
+            0
+        }
 
         enableEdgeToEdge()
         if (isDebuggable) {
@@ -102,10 +107,16 @@ class MainActivity : ComponentActivity() {
 
                 VoiceSshScreen(
                     uiState = uiState,
+                    initialTabIndex = initialTabIndex,
                     onDraftChange = viewModel::onDraftChange,
                     onClearDraft = viewModel::clearDraft,
                     onSendDraft = viewModel::sendDraft,
                     onLaunchSpeech = launchSpeech,
+                    onSessionNameChange = viewModel::onSessionNameChange,
+                    onSaveSession = viewModel::saveSession,
+                    onLoadSession = viewModel::loadSession,
+                    onQuickConnectSession = viewModel::quickConnect,
+                    onDeleteSession = viewModel::deleteSession,
                     onHostChange = viewModel::onHostChange,
                     onPortChange = viewModel::onPortChange,
                     onUsernameChange = viewModel::onUsernameChange,
@@ -170,6 +181,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         const val EXTRA_DEBUG_AUTH_MODE = "com.apple101012.voicessh.extra.DEBUG_AUTH_MODE"
         const val EXTRA_DEBUG_HOST = "com.apple101012.voicessh.extra.DEBUG_HOST"
+        const val EXTRA_DEBUG_START_ON_TERMINAL = "com.apple101012.voicessh.extra.DEBUG_START_ON_TERMINAL"
         const val EXTRA_DEBUG_PORT = "com.apple101012.voicessh.extra.DEBUG_PORT"
         const val EXTRA_DEBUG_PRIVATE_KEY = "com.apple101012.voicessh.extra.DEBUG_PRIVATE_KEY"
         const val EXTRA_DEBUG_USERNAME = "com.apple101012.voicessh.extra.DEBUG_USERNAME"

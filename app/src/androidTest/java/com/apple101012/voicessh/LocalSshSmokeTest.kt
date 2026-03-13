@@ -3,8 +3,6 @@ package com.apple101012.voicessh
 import android.content.Intent
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -100,7 +98,6 @@ class LocalSshSmokeTest {
                 error,
             )
         }
-        composeRule.onNodeWithTag("terminalOutput").performScrollTo()
         captureScreenshot("03-command-sent")
 
         assertTrue(screenshotDir.resolve("02-connected.png").exists())
@@ -163,6 +160,7 @@ class LocalSshSmokeTest {
                 putExtra(MainActivity.EXTRA_DEBUG_PORT, args.getString(ARG_PORT) ?: DEFAULT_PORT)
                 putExtra(MainActivity.EXTRA_DEBUG_USERNAME, args.getString(ARG_USERNAME) ?: DEFAULT_USERNAME)
                 putExtra(MainActivity.EXTRA_DEBUG_PRIVATE_KEY, loadPrivateKey())
+                putExtra(MainActivity.EXTRA_DEBUG_START_ON_TERMINAL, true)
             }
         }
 

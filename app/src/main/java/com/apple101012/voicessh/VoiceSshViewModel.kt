@@ -2,6 +2,7 @@ package com.apple101012.voicessh
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,8 @@ import kotlinx.coroutines.launch
 
 data class VoiceSshUiState(
     val draft: String = "",
+    val sessionName: String = "",
+    val savedSessions: List<SavedTerminalSession> = emptyList(),
     val profile: ConnectionProfile = ConnectionProfile(),
     val terminalInput: String = "",
     val terminalSnapshot: TerminalSessionSnapshot = TerminalSessionSnapshot(),
@@ -26,6 +29,7 @@ data class VoiceSshUiState(
 
 class VoiceSshViewModel(
     private val terminalRepository: TerminalSessionRepository,
+    private val savedSessionRepository: SavedSessionRepository,
 ) : ViewModel() {
     private val mutableUiState = mutableStateOf(
         VoiceSshUiState(terminalSnapshot = terminalRepository.sessionState.value),
@@ -38,6 +42,11 @@ class VoiceSshViewModel(
                 mutableUiState.value = mutableUiState.value.copy(terminalSnapshot = snapshot)
             }
         }
+        viewModelScope.launch {
+            savedSessionRepository.sessions.collectLatest { sessions ->
+                mutableUiState.value = mutableUiState.value.copy(savedSessions = sessions)
+            }
+        }
     }
 
     fun onDraftChange(draft: String) {
@@ -46,6 +55,10 @@ class VoiceSshViewModel(
 
     fun clearDraft() {
         mutableUiState.value = mutableUiState.value.copy(draft = "", message = null)
+    }
+
+    fun onSessionNameChange(sessionName: String) {
+        mutableUiState.value = mutableUiState.value.copy(sessionName = sessionName, message = null)
     }
 
     fun onHostChange(host: String) = updateProfile { copy(host = host) }
@@ -95,6 +108,60 @@ class VoiceSshViewModel(
 
     fun dismissMessage() {
         mutableUiState.value = mutableUiState.value.copy(message = null)
+    }
+
+    fun saveSession() {
+        val sessionName = mutableUiState.value.sessionName.trim()
+        if (sessionName.isBlank()) {
+            mutableUiState.value = mutableUiState.value.copy(message = "Session name is required.")
+            return
+        }
+
+        val profile = mutableUiState.value.profile
+        val validationError = validateProfile(profile)
+        if (validationError != null) {
+            mutableUiState.value = mutableUiState.value.copy(message = validationError)
+            return
+        }
+
+        val sanitizedProfile = profile.copy(
+            host = profile.host.trim(),
+            username = profile.username.trim(),
+        )
+
+        viewModelScope.launch {
+            savedSessionRepository.saveSession(
+                SavedTerminalSession(
+                    name = sessionName,
+                    profile = sanitizedProfile,
+                ),
+            )
+            mutableUiState.value = mutableUiState.value.copy(message = "Session saved.")
+        }
+    }
+
+    fun loadSession(session: SavedTerminalSession) {
+        mutableUiState.value = mutableUiState.value.copy(
+            sessionName = session.name,
+            profile = session.profile,
+            message = "Session loaded.",
+        )
+    }
+
+    fun quickConnect(session: SavedTerminalSession) {
+        loadSession(session)
+        connect()
+    }
+
+    fun deleteSession(session: SavedTerminalSession) {
+        viewModelScope.launch {
+            savedSessionRepository.deleteSession(session.name)
+            val nextSessionName = if (mutableUiState.value.sessionName == session.name) "" else mutableUiState.value.sessionName
+            mutableUiState.value = mutableUiState.value.copy(
+                sessionName = nextSessionName,
+                message = "Session deleted.",
+            )
+        }
     }
 
     fun connect() {
@@ -187,8 +254,13 @@ class VoiceSshViewModel(
     companion object {
         const val EMULATOR_HOST = "10.0.2.2"
 
-        val Factory: ViewModelProvider.Factory = viewModelFactory {
-            initializer { VoiceSshViewModel(JschTerminalSessionRepository()) }
+        fun factory(context: Context): ViewModelProvider.Factory = viewModelFactory {
+            initializer {
+                VoiceSshViewModel(
+                    terminalRepository = JschTerminalSessionRepository(),
+                    savedSessionRepository = DataStoreSavedSessionRepository(context.applicationContext),
+                )
+            }
         }
     }
 }

@@ -1,6 +1,9 @@
 # Local Smoke Test
 
-This app now has a repeatable emulator smoke test for the SSH flow. The current build uses a simplified single-screen testing layout so the connection profile, terminal output, and prompt input are all visible in one vertical flow.
+This app now has a repeatable emulator smoke test for the SSH flow. The current build uses the two-tab layout:
+
+- `Voice Prompt` for speech/type/edit/send
+- `Terminal` for saved sessions, quick connect, and the live shell
 
 The smoke test proves:
 
@@ -38,11 +41,12 @@ Use this when you want to verify the UI yourself instead of running the smoke sc
    - Port: `2222`
    - Username: `Apple`
 7. Load the private key from `%LOCALAPPDATA%\VoiceSshApp\local-sshd\client_rsa`, or paste that file's contents into the private key field.
-8. Tap `Connect`.
-9. Confirm the terminal output shows `Connected to Apple@10.0.2.2:2222.`
-10. In `Manual terminal input`, enter `codex`.
-11. Tap `Send Command`.
-12. Confirm `codex` appears in the terminal output.
+8. Optionally enter a session name and tap `Save Session`.
+9. Tap `Connect`.
+10. Confirm the terminal output shows `Connected to Apple@10.0.2.2:2222.`
+11. In `Manual terminal input`, enter `codex`.
+12. Tap `Send`.
+13. Confirm `codex` appears in the terminal output.
 
 ## Manual Phone Test
 

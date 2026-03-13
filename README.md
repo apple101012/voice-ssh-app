@@ -18,10 +18,11 @@ First working milestone is implemented.
 
 ## Current Milestone
 
-- Jetpack Compose app with a simplified single-screen testing layout
+- Jetpack Compose app with `Voice Prompt` and `Terminal` tabs
 - Speech-to-text via Android `RecognizerIntent`
 - Manual prompt editing and `Send to Terminal`
 - SSH shell connection over password auth or pasted private-key auth using JSch
+- Saved SSH sessions with quick connect from the Terminal tab
 - Live terminal output panel plus manual terminal input
 - Emulator-host shortcut for `10.0.2.2`
 - Emulator-tested debug APK build
@@ -49,7 +50,7 @@ The JVM test suite includes real SSH integration tests for both password auth an
 - Nothing in that directory is committed to the repo
 - When testing from the Android emulator on the same Windows machine, use host `10.0.2.2`
 - Smoke-test screenshots are pulled into `artifacts/local-smoke/local-ssh-smoke`
-- The current testing UI keeps connection controls, terminal output, and prompt input on one screen
+- The Terminal tab keeps saved sessions, quick connect, and the terminal on the same screen
 
 ## Known Limits In This Milestone
 
