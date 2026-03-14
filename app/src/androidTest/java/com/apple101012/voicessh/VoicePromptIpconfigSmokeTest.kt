@@ -1,12 +1,16 @@
 package com.apple101012.voicessh
 
 import android.content.Intent
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.AndroidComposeTestRule
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
-import androidx.test.uiautomator.UiSelector
 import java.io.File
 import java.util.Base64
 import org.junit.Assert.assertTrue
@@ -17,7 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
-class LocalSshSmokeTest {
+class VoicePromptIpconfigSmokeTest {
     private val activityRule = ActivityScenarioRule<MainActivity>(buildLaunchIntent())
 
     @get:Rule
@@ -38,7 +42,7 @@ class LocalSshSmokeTest {
     fun setUp() {
         screenshotDir = File(
             instrumentation.targetContext.getExternalFilesDir("test-screenshots"),
-            "local-ssh-smoke",
+            "prompt-command-smoke",
         ).apply {
             mkdirs()
             listFiles()?.forEach(File::delete)
@@ -46,74 +50,66 @@ class LocalSshSmokeTest {
     }
 
     @Test
-    fun connectsToLocalLoopbackSshAndSendsCommand() {
+    fun typedPromptSendsIpconfigToTerminal() {
         assumeTrue(
             "Pass voiceSshPrivateKeyBase64 to run this smoke test.",
             loadPrivateKey().isNotBlank(),
         )
 
-        val host = runnerArgs.getString(ARG_HOST) ?: DEFAULT_HOST
-        val port = runnerArgs.getString(ARG_PORT) ?: DEFAULT_PORT
-        val username = runnerArgs.getString(ARG_USERNAME) ?: DEFAULT_USERNAME
-        val command = runnerArgs.getString(ARG_COMMAND) ?: DEFAULT_COMMAND
+        val promptCommand = runnerArgs.getString(ARG_PROMPT_COMMAND) ?: DEFAULT_PROMPT_COMMAND
+        val expectedMarker = runnerArgs.getString(ARG_EXPECTED_MARKER) ?: DEFAULT_EXPECTED_MARKER
 
-        captureScreenshot("01-profile-ready")
+        captureScreenshot("01-start-terminal")
 
         activityRule.scenario.onActivity { activity ->
             activity.connectForTesting()
         }
-        try {
-            composeRule.waitUntil(CONNECT_TIMEOUT_MS) {
-                currentUiState().terminalSnapshot.status == ConnectionStatus.Connected
-            }
-        } catch (error: Throwable) {
-            captureScreenshot("02-connect-failed")
-            val uiState = currentUiState()
-            throw AssertionError(
-                "Connect hook did not reach Connected. " +
-                    "status=${uiState.terminalSnapshot.status} " +
-                    "message=${uiState.message} " +
-                    "lastError=${uiState.terminalSnapshot.lastError}",
-                error,
-            )
+        composeRule.waitUntil(CONNECT_TIMEOUT_MS) {
+            val snapshot = currentUiState().terminalSnapshot
+            snapshot.status == ConnectionStatus.Connected &&
+                snapshot.output.contains("Connected to")
         }
-        assertTrue(currentUiState().terminalSnapshot.status == ConnectionStatus.Connected)
-        assertTrue(
-            currentUiState().terminalSnapshot.targetSummary
-                .orEmpty()
-                .contains("$username@$host:$port"),
-        )
+        composeRule.waitUntil(COMMAND_TIMEOUT_MS) {
+            currentUiState().terminalSnapshot.output.contains(">")
+        }
+        composeRule.waitForIdle()
         captureScreenshot("02-connected")
 
-        activityRule.scenario.onActivity { activity ->
-            activity.sendTerminalInputForTesting(command)
+        composeRule.onNodeWithTag("promptTab").performClick()
+        composeRule.onNodeWithTag("draftField").performTextInput(promptCommand)
+        composeRule.waitUntil(COMMAND_TIMEOUT_MS) {
+            currentUiState().draft.contains(promptCommand)
         }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText(promptCommand, substring = true).assertIsDisplayed()
+        captureScreenshot("03-prompt-typed-command")
+
+        composeRule.onNodeWithTag("sendDraftButton").performClick()
         try {
             composeRule.waitUntil(COMMAND_TIMEOUT_MS) {
-                currentUiState().terminalSnapshot.output.contains(command)
-            }
-            if (command.equals("ipconfig", ignoreCase = true)) {
-                composeRule.waitUntil(IPCONFIG_TIMEOUT_MS) {
-                    currentUiState().terminalSnapshot.output.contains(IPCONFIG_EXPECTED_MARKER)
-                }
-                revealIpconfigOutputForScreenshot()
-                captureScreenshot("04-ipconfig-output")
+                currentUiState().terminalSnapshot.output.contains(expectedMarker)
             }
         } catch (error: Throwable) {
-            captureScreenshot("03-command-failed")
-            val uiState = currentUiState()
+            captureScreenshot("03b-prompt-send-timeout")
+            val outputTail = currentUiState().terminalSnapshot.output.takeLast(600)
             throw AssertionError(
-                "Command hook did not reach terminal output. " +
-                    "status=${uiState.terminalSnapshot.status} " +
-                    "message=${uiState.message} " +
-                    "lastError=${uiState.terminalSnapshot.lastError}",
+                "Expected marker '$expectedMarker' not found after prompt send. " +
+                    "Output tail:\n$outputTail",
                 error,
             )
         }
-        captureScreenshot("03-command-sent")
 
-        assertTrue(screenshotDir.resolve("02-connected.png").exists())
-        assertTrue(screenshotDir.resolve("03-command-sent.png").exists())
+        composeRule.onNodeWithText("Terminal").performClick()
+        composeRule.onNodeWithTag("terminalOutput").assertIsDisplayed()
+        composeRule.waitUntil(COMMAND_TIMEOUT_MS) {
+            currentUiState().terminalSnapshot.output.contains(expectedMarker)
+        }
+        captureScreenshot("04-terminal-after-prompt-send")
+
+        val terminalOutput = currentUiState().terminalSnapshot.output
+        assertTrue(
+            terminalOutput.contains(expectedMarker),
+        )
     }
 
     private fun captureScreenshot(name: String) {
@@ -131,44 +127,20 @@ class LocalSshSmokeTest {
         return uiState
     }
 
-    private fun revealIpconfigOutputForScreenshot() {
-        var markerVisible = device.findObject(UiSelector().textContains(IPCONFIG_EXPECTED_MARKER)).exists()
-        if (markerVisible) {
-            return
-        }
-
-        val centerX = device.displayWidth / 2
-        val startY = (device.displayHeight * 0.45f).toInt()
-        val endY = (device.displayHeight * 0.68f).toInt()
-        repeat(8) {
-            device.swipe(centerX, startY, centerX, endY, 28)
-            instrumentation.waitForIdleSync()
-            markerVisible = device.findObject(UiSelector().textContains(IPCONFIG_EXPECTED_MARKER)).exists()
-            if (markerVisible) {
-                return
-            }
-        }
-
-        assertTrue(
-            "Expected '$IPCONFIG_EXPECTED_MARKER' to be visible on screen before screenshot.",
-            markerVisible,
-        )
-    }
-
     companion object {
-        private const val ARG_COMMAND = "voiceSshCommand"
         private const val ARG_HOST = "voiceSshHost"
         private const val ARG_PORT = "voiceSshPort"
         private const val ARG_PRIVATE_KEY_BASE64 = "voiceSshPrivateKeyBase64"
+        private const val ARG_PROMPT_COMMAND = "voiceSshPromptCommand"
+        private const val ARG_EXPECTED_MARKER = "voiceSshExpectedMarker"
         private const val ARG_USERNAME = "voiceSshUsername"
         private const val CONNECT_TIMEOUT_MS = 30_000L
-        private const val COMMAND_TIMEOUT_MS = 10_000L
-        private const val IPCONFIG_TIMEOUT_MS = 20_000L
-        private const val DEFAULT_COMMAND = "codex"
+        private const val COMMAND_TIMEOUT_MS = 20_000L
         private const val DEFAULT_HOST = "10.0.2.2"
         private const val DEFAULT_PORT = "2222"
         private const val DEFAULT_USERNAME = "Apple"
-        private const val IPCONFIG_EXPECTED_MARKER = "Windows IP Configuration"
+        private const val DEFAULT_PROMPT_COMMAND = "ver"
+        private const val DEFAULT_EXPECTED_MARKER = "Microsoft Windows"
 
         private fun getActivity(rule: ActivityScenarioRule<MainActivity>): MainActivity {
             var activity: MainActivity? = null

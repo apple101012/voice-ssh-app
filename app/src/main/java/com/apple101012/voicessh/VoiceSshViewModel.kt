@@ -200,7 +200,7 @@ class VoiceSshViewModel(
         }
 
         viewModelScope.launch {
-            terminalRepository.send("$draft\n")
+            terminalRepository.send("$draft\r")
             mutableUiState.value = mutableUiState.value.copy(message = "Prompt sent to the terminal.")
         }
     }
@@ -217,7 +217,7 @@ class VoiceSshViewModel(
         }
 
         viewModelScope.launch {
-            terminalRepository.send("$input\n")
+            terminalRepository.send("$input\r")
             mutableUiState.value = mutableUiState.value.copy(
                 terminalInput = "",
                 message = "Command sent.",

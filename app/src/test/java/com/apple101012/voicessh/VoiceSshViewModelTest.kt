@@ -25,7 +25,7 @@ class VoiceSshViewModelTest {
         viewModel.sendDraft()
         advanceUntilIdle()
 
-        assertThat(repository.sentInputs).containsExactly("ls -la\n")
+        assertThat(repository.sentInputs).containsExactly("ls -la\r")
         assertThat(viewModel.uiState.value.message).isEqualTo("Prompt sent to the terminal.")
     }
 
@@ -115,7 +115,7 @@ class VoiceSshViewModelTest {
         viewModel.sendQuickCommand("codex")
         advanceUntilIdle()
 
-        assertThat(repository.sentInputs).containsExactly("codex\n")
+        assertThat(repository.sentInputs).containsExactly("codex\r")
         assertThat(viewModel.uiState.value.terminalInput).isEmpty()
         assertThat(viewModel.uiState.value.message).isEqualTo("Command sent.")
     }

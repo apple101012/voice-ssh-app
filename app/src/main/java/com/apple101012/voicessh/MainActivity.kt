@@ -26,7 +26,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val isDebuggable = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
         val initialTabIndex = if (isDebuggable && intent.getBooleanExtra(EXTRA_DEBUG_START_ON_TERMINAL, false)) {
-            1
+            2
         } else {
             0
         }

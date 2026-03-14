@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -41,15 +43,16 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,28 +63,26 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 
-private enum class MainTab(val label: String) {
-    Prompt("Voice Prompt"),
-    Terminal("Terminal"),
+private enum class MainTab(val label: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    Prompt("Voice", Icons.Outlined.GraphicEq),
+    Sessions("Sessions", Icons.Outlined.History),
+    Terminal("Terminal", Icons.Outlined.Terminal),
 }
 
-private val AppGradientTop = Color(0xFF0C1D31)
-private val AppGradientMid = Color(0xFF0A1626)
-private val AppGradientBottom = Color(0xFF070E19)
-private val TerminalInk = Color(0xFF07101B)
-private val TerminalOutput = Color(0xFFEAF3FF)
+private val TerminalInk = Color(0xFF050B13)
+private val TerminalOutput = Color(0xFF13EC5B)
 private val TerminalMeta = Color(0xFF92ABCA)
-private val TerminalConnectedDot = Color(0xFF61D8FF)
-private val TerminalDisconnectedDot = Color(0xFF5D6F86)
+private val TerminalConnectedDot = Color(0xFF13EC5B)
+private val TerminalDisconnectedDot = Color(0xFF385372)
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -117,133 +118,139 @@ fun VoiceSshScreen(
         mutableIntStateOf(initialTabIndex.coerceIn(0, tabs.lastIndex))
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        AppGradientTop,
-                        AppGradientMid,
-                        AppGradientBottom,
-                    ),
-                ),
-            ),
-    ) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text("Voice SSH")
-                            Text(
-                                "Navy mobile workspace for voice-to-terminal coding.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    },
-                )
-            },
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-            ) {
-                PrimaryTabRow(
-                    selectedTabIndex = selectedTab,
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                ) {
-                    tabs.forEachIndexed { index, tab ->
-                        Tab(
-                            selected = selectedTab == index,
-                            onClick = { selectedTab = index },
-                            modifier = Modifier.testTag(
-                                if (tab == MainTab.Prompt) {
-                                    "promptTab"
-                                } else {
-                                    "terminalTab"
-                                },
-                            ),
-                            text = { Text(tab.label) },
-                            icon = {
-                                Icon(
-                                    imageVector = if (tab == MainTab.Prompt) {
-                                        Icons.Outlined.GraphicEq
-                                    } else {
-                                        Icons.Outlined.Terminal
-                                    },
-                                    contentDescription = null,
-                                )
-                            },
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "VOICE SSH",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "Navy mobile workspace",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
                         )
                     }
-                }
-                if (uiState.message != null) {
-                    Surface(
-                        color = MaterialTheme.colorScheme.secondaryContainer,
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                text = uiState.message,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium,
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                )
+            )
+        },
+        bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                tabs.forEachIndexed { index, tab ->
+                    NavigationBarItem(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        modifier = Modifier.testTag(
+                            when (tab) {
+                                MainTab.Prompt -> "promptTab"
+                                MainTab.Sessions -> "terminalTab"
+                                MainTab.Terminal -> "liveTerminalTab"
+                            },
+                        ),
+                        label = { Text(tab.label) },
+                        icon = {
+                            Icon(
+                                imageVector = tab.icon,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp)
                             )
-                            TextButton(onClick = onDismissMessage) {
-                                Text("Dismiss")
-                            }
+                        },
+                        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.secondary,
+                            unselectedTextColor = MaterialTheme.colorScheme.secondary,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                        )
+                    )
+                }
+            }
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            if (uiState.message != null) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = uiState.message,
+                            modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        TextButton(onClick = onDismissMessage) {
+                            Text("OK", color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
+            }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                ) {
-                    when (tabs[selectedTab]) {
-                        MainTab.Prompt -> {
-                            PromptTab(
-                                uiState = uiState,
-                                onDraftChange = onDraftChange,
-                                onClearDraft = onClearDraft,
-                                onSendDraft = onSendDraft,
-                                onLaunchSpeech = onLaunchSpeech,
-                            )
-                        }
-                        MainTab.Terminal -> {
-                            TerminalTab(
-                                uiState = uiState,
-                                onSessionNameChange = onSessionNameChange,
-                                onSaveSession = onSaveSession,
-                                onLoadSession = onLoadSession,
-                                onQuickConnectSession = onQuickConnectSession,
-                                onDeleteSession = onDeleteSession,
-                                onHostChange = onHostChange,
-                                onPortChange = onPortChange,
-                                onUsernameChange = onUsernameChange,
-                                onAuthModeChange = onAuthModeChange,
-                                onPasswordChange = onPasswordChange,
-                                onPrivateKeyChange = onPrivateKeyChange,
-                                onPickPrivateKeyFile = onPickPrivateKeyFile,
-                                onUseEmulatorHost = onUseEmulatorHost,
-                                onConnect = onConnect,
-                                onDisconnect = onDisconnect,
-                                onTerminalInputChange = onTerminalInputChange,
-                                onSendTerminalInput = onSendTerminalInput,
-                                onSendQuickCommand = onSendQuickCommand,
-                            )
-                        }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                when (tabs[selectedTab]) {
+                    MainTab.Prompt -> {
+                        PromptTab(
+                            uiState = uiState,
+                            onDraftChange = onDraftChange,
+                            onClearDraft = onClearDraft,
+                            onSendDraft = onSendDraft,
+                            onLaunchSpeech = onLaunchSpeech,
+                        )
+                    }
+                    MainTab.Sessions -> {
+                        SessionsTab(
+                            uiState = uiState,
+                            onSessionNameChange = onSessionNameChange,
+                            onSaveSession = onSaveSession,
+                            onLoadSession = onLoadSession,
+                            onQuickConnectSession = onQuickConnectSession,
+                            onDeleteSession = onDeleteSession,
+                            onHostChange = onHostChange,
+                            onPortChange = onPortChange,
+                            onUsernameChange = onUsernameChange,
+                            onAuthModeChange = onAuthModeChange,
+                            onPasswordChange = onPasswordChange,
+                            onPrivateKeyChange = onPrivateKeyChange,
+                            onPickPrivateKeyFile = onPickPrivateKeyFile,
+                            onUseEmulatorHost = onUseEmulatorHost,
+                            onConnect = onConnect,
+                        )
+                    }
+                    MainTab.Terminal -> {
+                        TerminalTab(
+                            uiState = uiState,
+                            onDisconnect = onDisconnect,
+                            onTerminalInputChange = onTerminalInputChange,
+                            onSendTerminalInput = onSendTerminalInput,
+                            onSendQuickCommand = onSendQuickCommand,
+                        )
                     }
                 }
             }
@@ -262,95 +269,105 @@ private fun PromptTab(
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
-                modifier = Modifier.padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 StatusPill(
                     text = when (uiState.terminalSnapshot.status) {
-                        ConnectionStatus.Connected -> "Linked to terminal"
-                        ConnectionStatus.Connecting -> "Connecting terminal"
-                        ConnectionStatus.Disconnected -> "Terminal offline"
+                        ConnectionStatus.Connected -> "CONNECTED"
+                        ConnectionStatus.Connecting -> "CONNECTING"
+                        ConnectionStatus.Disconnected -> "OFFLINE"
                     },
                     active = uiState.terminalSnapshot.status == ConnectionStatus.Connected,
                 )
                 Text(
-                    text = "Navy Voice Prompt Composer",
-                    style = MaterialTheme.typography.headlineMedium,
+                    text = "Voice Prompt Composer",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "Speak or type, edit the text, then ship the final prompt into your active SSH session.",
+                    text = "Speak or type your command, then ship it to the active terminal.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
-                if (uiState.terminalSnapshot.targetSummary != null) {
-                    AssistChip(
-                        onClick = {},
-                        enabled = false,
-                        label = { Text("Target: ${uiState.terminalSnapshot.targetSummary}") },
-                    )
-                }
             }
         }
 
         Card(
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                containerColor = MaterialTheme.colorScheme.surface,
             ),
-            shape = RoundedCornerShape(26.dp),
+            shape = RoundedCornerShape(24.dp),
             modifier = Modifier.weight(1f),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Prompt Draft", style = MaterialTheme.typography.titleLarge)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("DRAFT", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    TextButton(onClick = onClearDraft) {
+                        Text("CLEAR", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                
                 OutlinedTextField(
                     value = uiState.draft,
                     onValueChange = onDraftChange,
                     modifier = Modifier
                         .fillMaxSize()
                         .testTag("draftField"),
-                    label = { Text("Voice or typed prompt") },
-                    supportingText = { Text(promptStatusText(uiState)) },
+                    placeholder = { Text("Enter prompt or use voice...") },
+                    shape = RoundedCornerShape(16.dp),
                 )
             }
         }
 
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
-            ),
-            shape = RoundedCornerShape(24.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            FlowRow(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+            Button(
+                onClick = onLaunchSpeech,
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 56.dp)
+                    .testTag("micButton"),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Button(onClick = onLaunchSpeech, modifier = Modifier.testTag("micButton")) {
-                    IconLabel(Icons.Outlined.KeyboardVoice, "Voice")
-                }
-                OutlinedButton(onClick = onClearDraft) {
-                    Text("Clear")
-                }
-                Button(
-                    onClick = onSendDraft,
-                    enabled = uiState.canSendDraft,
-                    modifier = Modifier.testTag("sendDraftButton"),
-                ) {
-                    IconLabel(Icons.AutoMirrored.Outlined.Send, "Send to Terminal")
-                }
+                IconLabel(Icons.Outlined.KeyboardVoice, "VOICE")
+            }
+            Button(
+                onClick = onSendDraft,
+                enabled = uiState.canSendDraft,
+                modifier = Modifier
+                    .weight(1.5f)
+                    .heightIn(min = 56.dp)
+                    .testTag("sendDraftButton"),
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                IconLabel(Icons.AutoMirrored.Outlined.Send, "SEND TO TERMINAL")
             }
         }
     }
@@ -358,7 +375,7 @@ private fun PromptTab(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TerminalTab(
+private fun SessionsTab(
     uiState: VoiceSshUiState,
     onSessionNameChange: (String) -> Unit,
     onSaveSession: () -> Unit,
@@ -374,141 +391,56 @@ private fun TerminalTab(
     onPickPrivateKeyFile: () -> Unit,
     onUseEmulatorHost: () -> Unit,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onTerminalInputChange: (String) -> Unit,
-    onSendTerminalInput: () -> Unit,
-    onSendQuickCommand: (String) -> Unit,
-) {
-    var showConnectionEditor by rememberSaveable {
-        mutableStateOf(uiState.terminalSnapshot.status != ConnectionStatus.Connected)
-    }
-    val terminalOutputScrollState = rememberScrollState()
-
-    LaunchedEffect(uiState.terminalSnapshot.output) {
-        terminalOutputScrollState.scrollTo(terminalOutputScrollState.maxValue)
-    }
-    LaunchedEffect(uiState.terminalSnapshot.status) {
-        when (uiState.terminalSnapshot.status) {
-            ConnectionStatus.Connected -> showConnectionEditor = false
-            ConnectionStatus.Disconnected -> showConnectionEditor = true
-            ConnectionStatus.Connecting -> Unit
-        }
-    }
-
-    if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) {
-        ConnectedWorkspaceView(
-            uiState = uiState,
-            showConnectionEditor = showConnectionEditor,
-            terminalOutputScrollState = terminalOutputScrollState,
-            onToggleConnectionEditor = { showConnectionEditor = !showConnectionEditor },
-            onSessionNameChange = onSessionNameChange,
-            onSaveSession = onSaveSession,
-            onLoadSession = onLoadSession,
-            onQuickConnectSession = onQuickConnectSession,
-            onDeleteSession = onDeleteSession,
-            onHostChange = onHostChange,
-            onPortChange = onPortChange,
-            onUsernameChange = onUsernameChange,
-            onAuthModeChange = onAuthModeChange,
-            onPasswordChange = onPasswordChange,
-            onPrivateKeyChange = onPrivateKeyChange,
-            onPickPrivateKeyFile = onPickPrivateKeyFile,
-            onUseEmulatorHost = onUseEmulatorHost,
-            onConnect = onConnect,
-            onDisconnect = onDisconnect,
-            onTerminalInputChange = onTerminalInputChange,
-            onSendTerminalInput = onSendTerminalInput,
-            onSendQuickCommand = onSendQuickCommand,
-        )
-    } else {
-        SessionManagerView(
-            uiState = uiState,
-            terminalOutputScrollState = terminalOutputScrollState,
-            onSessionNameChange = onSessionNameChange,
-            onSaveSession = onSaveSession,
-            onLoadSession = onLoadSession,
-            onQuickConnectSession = onQuickConnectSession,
-            onDeleteSession = onDeleteSession,
-            onHostChange = onHostChange,
-            onPortChange = onPortChange,
-            onUsernameChange = onUsernameChange,
-            onAuthModeChange = onAuthModeChange,
-            onPasswordChange = onPasswordChange,
-            onPrivateKeyChange = onPrivateKeyChange,
-            onPickPrivateKeyFile = onPickPrivateKeyFile,
-            onUseEmulatorHost = onUseEmulatorHost,
-            onConnect = onConnect,
-            onDisconnect = onDisconnect,
-            onTerminalInputChange = onTerminalInputChange,
-            onSendTerminalInput = onSendTerminalInput,
-            onSendQuickCommand = onSendQuickCommand,
-        )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SessionManagerView(
-    uiState: VoiceSshUiState,
-    terminalOutputScrollState: androidx.compose.foundation.ScrollState,
-    onSessionNameChange: (String) -> Unit,
-    onSaveSession: () -> Unit,
-    onLoadSession: (SavedTerminalSession) -> Unit,
-    onQuickConnectSession: (SavedTerminalSession) -> Unit,
-    onDeleteSession: (SavedTerminalSession) -> Unit,
-    onHostChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
-    onUsernameChange: (String) -> Unit,
-    onAuthModeChange: (AuthMode) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onPrivateKeyChange: (String) -> Unit,
-    onPickPrivateKeyFile: () -> Unit,
-    onUseEmulatorHost: () -> Unit,
-    onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    onTerminalInputChange: (String) -> Unit,
-    onSendTerminalInput: () -> Unit,
-    onSendQuickCommand: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-            ),
-            shape = RoundedCornerShape(24.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("savedSessionsSection"),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                StatusPill(
-                    text = when (uiState.terminalSnapshot.status) {
-                        ConnectionStatus.Disconnected -> "Session manager"
-                        ConnectionStatus.Connecting -> "Connecting"
-                        ConnectionStatus.Connected -> "Connected"
-                    },
-                    active = false,
-                )
-                Text("Navy Terminal Session Manager", style = MaterialTheme.typography.titleLarge)
-                Text(
-                    "Saved sessions are first. Quick connect when ready, or edit a profile before connecting.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            Text(
+                text = "Saved Sessions",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
+            if (uiState.savedSessions.isEmpty()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(
+                        text = "No saved sessions yet.",
+                        modifier = Modifier.padding(20.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                }
+            } else {
+                uiState.savedSessions.forEach { session ->
+                    SessionCard(
+                        session = session,
+                        onQuickConnect = { onQuickConnectSession(session) },
+                        onLoad = { onLoadSession(session) },
+                        onDelete = { onDeleteSession(session) }
+                    )
+                }
             }
         }
 
-        SavedSessionsStrip(
-            uiState = uiState,
-            onLoadSession = onLoadSession,
-            onQuickConnectSession = onQuickConnectSession,
-            onDeleteSession = onDeleteSession,
-            compact = true,
+        Spacer(Modifier.size(8.dp))
+        Text(
+            text = "CREATE NEW PROFILE",
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 4.dp)
         )
 
         ConnectionEditorCard(
@@ -524,131 +456,102 @@ private fun SessionManagerView(
             onPickPrivateKeyFile = onPickPrivateKeyFile,
             onUseEmulatorHost = onUseEmulatorHost,
             onConnect = onConnect,
-            onDisconnect = onDisconnect,
-        )
-
-        TerminalWorkspaceCard(
-            uiState = uiState,
-            terminalOutputScrollState = terminalOutputScrollState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 220.dp, max = 220.dp),
-        )
-
-        TerminalInputCard(
-            uiState = uiState,
-            onTerminalInputChange = onTerminalInputChange,
-            onSendTerminalInput = onSendTerminalInput,
-            onSendQuickCommand = onSendQuickCommand,
         )
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ConnectedWorkspaceView(
+private fun SessionCard(
+    session: SavedTerminalSession,
+    onQuickConnect: () -> Unit,
+    onLoad: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(session.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.DeleteOutline, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                }
+            }
+            Text(
+                session.profile.summary,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary
+            )
+            Spacer(Modifier.size(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onQuickConnect,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("CONNECT")
+                }
+                OutlinedButton(
+                    onClick = onLoad,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("EDIT")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TerminalTab(
     uiState: VoiceSshUiState,
-    showConnectionEditor: Boolean,
-    terminalOutputScrollState: androidx.compose.foundation.ScrollState,
-    onToggleConnectionEditor: () -> Unit,
-    onSessionNameChange: (String) -> Unit,
-    onSaveSession: () -> Unit,
-    onLoadSession: (SavedTerminalSession) -> Unit,
-    onQuickConnectSession: (SavedTerminalSession) -> Unit,
-    onDeleteSession: (SavedTerminalSession) -> Unit,
-    onHostChange: (String) -> Unit,
-    onPortChange: (String) -> Unit,
-    onUsernameChange: (String) -> Unit,
-    onAuthModeChange: (AuthMode) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onPrivateKeyChange: (String) -> Unit,
-    onPickPrivateKeyFile: () -> Unit,
-    onUseEmulatorHost: () -> Unit,
-    onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onTerminalInputChange: (String) -> Unit,
     onSendTerminalInput: () -> Unit,
     onSendQuickCommand: (String) -> Unit,
 ) {
+    val terminalOutputScrollState = rememberScrollState()
+
+    LaunchedEffect(uiState.terminalSnapshot.output) {
+        terminalOutputScrollState.scrollTo(terminalOutputScrollState.maxValue)
+    }
+
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
-            ),
-            shape = RoundedCornerShape(24.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.Top,
+            Column {
+                Text(
+                    text = if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) "CONNECTED" else "DISCONNECTED",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+                )
+                Text(
+                    text = uiState.sessionName.ifBlank { uiState.terminalSnapshot.targetSummary ?: "Active Terminal" },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) {
+                OutlinedButton(
+                    onClick = onDisconnect,
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        StatusPill(
-                            text = "Navy Connected Terminal Workspace",
-                            active = true,
-                        )
-                        Text(
-                            text = uiState.sessionName.ifBlank { "Live terminal workspace" },
-                            style = MaterialTheme.typography.titleLarge,
-                        )
-                        Text(
-                            text = uiState.terminalSnapshot.targetSummary ?: uiState.profile.summary,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Column(
-                        horizontalAlignment = Alignment.End,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Button(onClick = onDisconnect) {
-                            IconLabel(Icons.Outlined.LinkOff, "Disconnect")
-                        }
-                        OutlinedButton(onClick = onToggleConnectionEditor) {
-                            IconLabel(
-                                Icons.Outlined.Tune,
-                                if (showConnectionEditor) "Hide Profile" else "Show Profile",
-                            )
-                        }
-                    }
+                    IconLabel(Icons.Outlined.LinkOff, "DISCONNECT")
                 }
             }
-        }
-
-        SavedSessionsStrip(
-            uiState = uiState,
-            onLoadSession = onLoadSession,
-            onQuickConnectSession = onQuickConnectSession,
-            onDeleteSession = onDeleteSession,
-            compact = true,
-        )
-
-        AnimatedVisibility(visible = showConnectionEditor) {
-            ConnectionEditorCard(
-                uiState = uiState,
-                onSessionNameChange = onSessionNameChange,
-                onSaveSession = onSaveSession,
-                onHostChange = onHostChange,
-                onPortChange = onPortChange,
-                onUsernameChange = onUsernameChange,
-                onAuthModeChange = onAuthModeChange,
-                onPasswordChange = onPasswordChange,
-                onPrivateKeyChange = onPrivateKeyChange,
-                onPickPrivateKeyFile = onPickPrivateKeyFile,
-                onUseEmulatorHost = onUseEmulatorHost,
-                onConnect = onConnect,
-                onDisconnect = onDisconnect,
-            )
         }
 
         TerminalWorkspaceCard(
@@ -676,54 +579,19 @@ private fun TerminalWorkspaceCard(
 ) {
     Card(
         colors = CardDefaults.cardColors(containerColor = TerminalInk),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         modifier = modifier.testTag("terminalOutput"),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(10.dp)
-                        .background(
-                            color = if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) {
-                                TerminalConnectedDot
-                            } else {
-                                TerminalDisconnectedDot
-                            },
-                            shape = CircleShape,
-                        ),
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = terminalStatusText(uiState),
-                        color = TerminalOutput,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        text = uiState.sessionName.ifBlank {
-                            uiState.terminalSnapshot.targetSummary ?: "No active session"
-                        },
-                        color = TerminalMeta,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
+        Box(modifier = Modifier.fillMaxSize()) {
             SelectionContainer(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(terminalOutputScrollState),
+                    .verticalScroll(terminalOutputScrollState)
+                    .padding(16.dp),
             ) {
                 Text(
-                    text = uiState.terminalSnapshot.output,
+                    text = uiState.terminalSnapshot.output.ifBlank { "Terminal output will appear here..." },
                     color = TerminalOutput,
                     style = MaterialTheme.typography.bodySmall,
                     fontFamily = FontFamily.Monospace,
@@ -743,19 +611,17 @@ private fun TerminalInputCard(
     onSendQuickCommand: (String) -> Unit,
 ) {
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        ),
-        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Terminal Input", style = MaterialTheme.typography.titleMedium)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 OutlinedTextField(
                     value = uiState.terminalInput,
@@ -763,14 +629,29 @@ private fun TerminalInputCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("terminalInputField"),
-                    label = { Text("Manual command") },
+                    placeholder = { Text("Command...") },
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (uiState.canSendTerminalInput) {
+                                onSendTerminalInput()
+                            }
+                        },
+                    ),
                 )
                 Button(
                     onClick = onSendTerminalInput,
                     enabled = uiState.canSendTerminalInput,
-                    modifier = Modifier.testTag("sendTerminalInputButton"),
+                    modifier = Modifier
+                        .testTag("sendTerminalInputButton")
+                        .widthIn(min = 108.dp),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    IconLabel(Icons.AutoMirrored.Outlined.Send, "Send")
+                    Icon(Icons.AutoMirrored.Outlined.Send, contentDescription = "Enter and send")
+                    Spacer(Modifier.size(6.dp))
+                    Text("ENTER")
                 }
             }
             FlowRow(
@@ -778,8 +659,8 @@ private fun TerminalInputCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 QuickCommandChip("pwd", onSendQuickCommand)
-                QuickCommandChip("ls", onSendQuickCommand)
-                QuickCommandChip("codex", onSendQuickCommand)
+                QuickCommandChip("ls -la", onSendQuickCommand)
+                QuickCommandChip("top", onSendQuickCommand)
                 QuickCommandChip("clear", onSendQuickCommand)
             }
         }
@@ -801,81 +682,64 @@ private fun ConnectionEditorCard(
     onPickPrivateKeyFile: () -> Unit,
     onUseEmulatorHost: () -> Unit,
     onConnect: () -> Unit,
-    onDisconnect: () -> Unit,
 ) {
-    val scrollModifier = if (uiState.terminalSnapshot.status == ConnectionStatus.Connected) {
-        Modifier
-            .heightIn(max = 420.dp)
-            .verticalScroll(rememberScrollState())
-    } else {
-        Modifier
-    }
-
     Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
-        ),
-        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = scrollModifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text("Connection Details", style = MaterialTheme.typography.titleLarge)
-
             OutlinedTextField(
                 value = uiState.sessionName,
                 onValueChange = onSessionNameChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("sessionNameField"),
-                label = { Text("Session name") },
+                modifier = Modifier.fillMaxWidth().testTag("sessionNameField"),
+                label = { Text("Session Name") },
+                shape = RoundedCornerShape(12.dp)
             )
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = uiState.profile.host,
                     onValueChange = onHostChange,
-                    modifier = Modifier
-                        .weight(2f)
-                        .testTag("hostField"),
+                    modifier = Modifier.weight(2f).testTag("hostField"),
                     label = { Text("Host") },
+                    shape = RoundedCornerShape(12.dp)
                 )
                 OutlinedTextField(
                     value = uiState.profile.port,
                     onValueChange = onPortChange,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("portField"),
+                    modifier = Modifier.weight(1f).testTag("portField"),
                     label = { Text("Port") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(12.dp)
                 )
             }
 
             OutlinedTextField(
                 value = uiState.profile.username,
                 onValueChange = onUsernameChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("usernameField"),
+                modifier = Modifier.fillMaxWidth().testTag("usernameField"),
                 label = { Text("Username") },
+                shape = RoundedCornerShape(12.dp)
             )
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 FilterChip(
                     selected = uiState.profile.authMode == AuthMode.Password,
                     onClick = { onAuthModeChange(AuthMode.Password) },
                     label = { Text("Password") },
                     modifier = Modifier.testTag("passwordAuthButton"),
+                    shape = RoundedCornerShape(8.dp)
                 )
                 FilterChip(
                     selected = uiState.profile.authMode == AuthMode.SshKey,
                     onClick = { onAuthModeChange(AuthMode.SshKey) },
                     label = { Text("SSH Key") },
                     modifier = Modifier.testTag("keyAuthButton"),
+                    shape = RoundedCornerShape(8.dp)
                 )
             }
 
@@ -883,166 +747,59 @@ private fun ConnectionEditorCard(
                 OutlinedTextField(
                     value = uiState.profile.password,
                     onValueChange = onPasswordChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("passwordField"),
+                    modifier = Modifier.fillMaxWidth().testTag("passwordField"),
                     label = { Text("Password") },
                     visualTransformation = PasswordVisualTransformation(),
+                    shape = RoundedCornerShape(12.dp)
                 )
             } else {
-                Text(
-                    text = if (uiState.profile.privateKey.isBlank()) {
-                        "Paste private key text or load a key file."
-                    } else {
-                        "Private key loaded. Replace or edit below if needed."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 OutlinedTextField(
                     value = uiState.profile.privateKey,
                     onValueChange = onPrivateKeyChange,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 140.dp)
+                        .heightIn(min = 120.dp)
                         .testTag("privateKeyField"),
-                    label = { Text("Private key") },
-                    minLines = 4,
-                    maxLines = 4,
+                    label = { Text("Private Key") },
+                    minLines = 3,
+                    shape = RoundedCornerShape(12.dp)
                 )
-            }
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                OutlinedButton(
-                    onClick = onUseEmulatorHost,
-                    modifier = Modifier.testTag("emulatorHostButton"),
-                ) {
-                    Text("Use Emulator Host")
-                }
                 OutlinedButton(
                     onClick = onPickPrivateKeyFile,
-                    modifier = Modifier.testTag("pickKeyFileButton"),
+                    modifier = Modifier.fillMaxWidth().testTag("pickKeyFileButton"),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    IconLabel(Icons.Outlined.FolderOpen, "Load Key File")
+                    IconLabel(Icons.Outlined.FolderOpen, "LOAD KEY FILE")
                 }
             }
 
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Button(onClick = onSaveSession, modifier = Modifier.testTag("saveSessionButton")) {
-                    IconLabel(Icons.Outlined.Save, "Save Session")
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onSaveSession,
+                    modifier = Modifier.weight(1f).testTag("saveSessionButton"),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                ) {
+                    IconLabel(Icons.Outlined.Save, "SAVE")
                 }
                 Button(
                     onClick = onConnect,
-                    enabled = uiState.terminalSnapshot.status != ConnectionStatus.Connecting,
-                    modifier = Modifier.testTag("connectButton"),
+                    modifier = Modifier.weight(1f).testTag("connectButton"),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    IconLabel(Icons.Outlined.Link, "Connect")
-                }
-                OutlinedButton(
-                    onClick = onDisconnect,
-                    enabled = uiState.terminalSnapshot.status != ConnectionStatus.Disconnected,
-                    modifier = Modifier.testTag("disconnectButton"),
-                ) {
-                    IconLabel(Icons.Outlined.LinkOff, "Disconnect")
+                    IconLabel(Icons.Outlined.Link, "CONNECT")
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun SavedSessionsStrip(
-    uiState: VoiceSshUiState,
-    onLoadSession: (SavedTerminalSession) -> Unit,
-    onQuickConnectSession: (SavedTerminalSession) -> Unit,
-    onDeleteSession: (SavedTerminalSession) -> Unit,
-    compact: Boolean,
-) {
-    Card(
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
-        ),
-        shape = RoundedCornerShape(22.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("savedSessionsSection"),
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Text("Saved Sessions", style = MaterialTheme.typography.titleMedium)
-            Text(
-                text = if (uiState.savedSessions.isEmpty()) {
-                    "No saved sessions yet. Save one profile and it appears here for quick connect."
-                } else {
-                    "Quick connect to jump straight into terminal mode."
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (uiState.savedSessions.isEmpty()) {
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
-                    Text(
-                        text = "No saved sessions yet.",
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = if (compact) 10.dp else 14.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            } else {
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    uiState.savedSessions.forEach { session ->
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
-                            ),
-                            shape = RoundedCornerShape(18.dp),
-                            modifier = Modifier.widthIn(min = if (compact) 220.dp else 240.dp),
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Text(
-                                    text = session.name,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = session.profile.summary,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
-                                    Button(onClick = { onQuickConnectSession(session) }) {
-                                        Text("Quick Connect")
-                                    }
-                                    OutlinedButton(onClick = { onLoadSession(session) }) {
-                                        Text("Load")
-                                    }
-                                    OutlinedButton(onClick = { onDeleteSession(session) }) {
-                                        IconLabel(Icons.Outlined.DeleteOutline, "Delete")
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+            
+            OutlinedButton(
+                onClick = onUseEmulatorHost,
+                modifier = Modifier.fillMaxWidth().testTag("emulatorHostButton"),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("USE EMULATOR HOST (10.0.2.2)")
             }
         }
     }
@@ -1056,6 +813,7 @@ private fun QuickCommandChip(
     AssistChip(
         onClick = { onSendQuickCommand(command) },
         label = { Text(command) },
+        shape = RoundedCornerShape(8.dp)
     )
 }
 
@@ -1066,20 +824,25 @@ private fun StatusPill(
 ) {
     Surface(
         color = if (active) {
-            MaterialTheme.colorScheme.primaryContainer
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
         } else {
-            MaterialTheme.colorScheme.secondaryContainer
+            MaterialTheme.colorScheme.secondary.copy(alpha = 0.1f)
         },
-        shape = RoundedCornerShape(999.dp),
+        shape = RoundedCornerShape(8.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.dp,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+        )
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
             color = if (active) {
-                MaterialTheme.colorScheme.onPrimaryContainer
+                MaterialTheme.colorScheme.primary
             } else {
-                MaterialTheme.colorScheme.onSecondaryContainer
+                MaterialTheme.colorScheme.secondary
             },
         )
     }
@@ -1096,27 +859,13 @@ private fun IconLabel(
         modifier = Modifier.size(18.dp),
     )
     Spacer(Modifier.size(8.dp))
-    Text(text)
+    Text(text, style = MaterialTheme.typography.labelLarge)
 }
 
-private fun promptStatusText(uiState: VoiceSshUiState): String {
-    return when (uiState.terminalSnapshot.status) {
-        ConnectionStatus.Connected -> {
-            "Connected to ${uiState.terminalSnapshot.targetSummary}. Prompt can be sent directly."
-        }
-        ConnectionStatus.Connecting -> {
-            "Connecting to ${uiState.terminalSnapshot.targetSummary ?: "host"}."
-        }
-        ConnectionStatus.Disconnected -> {
-            "Terminal is disconnected. Connect from the Terminal tab first."
-        }
-    }
-}
-
-private fun terminalStatusText(uiState: VoiceSshUiState): String {
-    return when (uiState.terminalSnapshot.status) {
-        ConnectionStatus.Connected -> "Connected to ${uiState.terminalSnapshot.targetSummary}"
-        ConnectionStatus.Connecting -> "Connecting to ${uiState.terminalSnapshot.targetSummary ?: "host"}"
-        ConnectionStatus.Disconnected -> "Disconnected"
-    }
+@Composable
+private fun IconButton(
+    onClick: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    androidx.compose.material3.IconButton(onClick = onClick, content = content)
 }
