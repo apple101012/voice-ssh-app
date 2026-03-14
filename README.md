@@ -24,6 +24,7 @@ First working milestone is implemented.
 - SSH shell connection over password auth or pasted private-key auth using JSch
 - Saved SSH sessions with quick connect from the Terminal tab
 - Live terminal output panel plus manual terminal input
+- Stitch-aligned navy UI pass for prompt composer, session manager, and connected workspace layouts
 - Emulator-host shortcut for `10.0.2.2`
 - Emulator-tested debug APK build
 
@@ -64,3 +65,4 @@ The JVM test suite includes real SSH integration tests for both password auth an
 - [Implementation Plan](docs/implementation-plan.md)
 - [Self-Review](docs/self-review.md)
 - [Local Smoke Test](docs/local-smoke-test.md)
+- [Stitch Screen Map](docs/stitch-screen-map.md)
