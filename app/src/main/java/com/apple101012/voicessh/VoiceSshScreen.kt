@@ -72,8 +72,8 @@ import androidx.compose.ui.unit.dp
 
 private enum class MainTab(val label: String) { Prompt("Voice Prompt"), Terminal("Terminal") }
 
-private val TerminalInk = Color(0xFF101615)
-private val TerminalGlow = Color(0xFF6DE2C9)
+private val TerminalInk = Color(0xFF090A0D)
+private val TerminalGlow = Color(0xFF37CAB8)
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
